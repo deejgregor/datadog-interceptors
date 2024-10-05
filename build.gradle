@@ -1,0 +1,23 @@
+
+plugins {
+    id 'application'                
+}
+
+description = 'interceptors'
+
+repositories {
+  mavenCentral()
+  gradlePluginPortal()
+}
+
+dependencies {
+  compileOnly('com.datadoghq:dd-trace-api:1.39.0')
+}
+
+jar {
+  manifest {
+    attributes(
+      "Premain-Class": "com.gregor.datadog.interceptors.InterceptorBootstrap"
+    )
+  }
+}
