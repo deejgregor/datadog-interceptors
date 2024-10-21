@@ -9,7 +9,9 @@ public final class InterceptorBootstrap {
         GlobalTracer.get().addTraceInterceptor(new UnsetErrorInterceptor(100));
         GlobalTracer.get().addTraceInterceptor(new SetErrorInterceptor(101));
 
-        // Promote comes last, so it can act on any adjustments to the error status made earlier
+        // Promote comes next, so it can act on any adjustments to the error status made earlier
         GlobalTracer.get().addTraceInterceptor(new PromoteErrorInterceptor(102));
+
+        GlobalTracer.get().addTraceInterceptor(new TraceMetricInterceptor(103));
     }
 }

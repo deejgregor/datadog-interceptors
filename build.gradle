@@ -1,17 +1,19 @@
 
 plugins {
-    id 'application'                
+    id 'com.gradleup.shadow' version '8.3.3'
+    id 'java'
 }
 
 description = 'interceptors'
 
 repositories {
-  mavenCentral()
-  gradlePluginPortal()
+    mavenCentral()
+    gradlePluginPortal()
 }
 
 dependencies {
-  compileOnly('com.datadoghq:dd-trace-api:1.39.0')
+    compileOnly('com.datadoghq:dd-trace-api:1.39.0')
+    implementation('com.datadoghq:java-dogstatsd-client:4.4.3') // XXX note: 4.2.1 is not in maven central repo
 }
 
 jar {
@@ -21,3 +23,21 @@ jar {
     )
   }
 }
+
+/*
+jar {
+    manifest {
+        attributes (
+            "Premain-Class" : "com.gregor.datadog.interceptors.InterceptorBootstrap"
+        )
+    }
+}
+
+ */
+
+tasks.named('shadowJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    enableRelocation true
+    archiveClassifier.set('')
+}
+
+assemble.dependsOn shadowJar
