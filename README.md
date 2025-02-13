@@ -12,9 +12,10 @@ Error handling use cases:
 2. Set the error status on spans where automatic instrumentation didn't detect an error. This is helpful when an automatically instrumented service receives an HTTP 200 response, but the HTTP body contains more detailed status information indicating an error, such as GraphQL errors. If the existence of the error is available in tags (including onces created by [Dynamic Instrumentation](https://docs.datadoghq.com/dynamic_instrumentation/)),  then this feature can be used to set the error status.
 3. Promote an error status from a deeper span to the Service Entry Span (aka LocalRootSpan). This helps to make errors visible on the Service page which usually shows the Service Entry Span by default and also [Error Tracking](https://docs.datadoghq.com/tracing/error_tracking/#use-span-tags-to-track-error-spans), which only looks at the Service Entry Span.
 
-Trace metrics use case:
+Trace metrics use cases:
 
 1. Trace metrics are needed with additional dimensions that are not available on the [out-of-the-box trace metrics](https://docs.datadoghq.com/tracing/metrics/metrics_namespace/#metric-suffix) **and** the metrics need to represent 100% of the applications traffic, so [generating metrics from spans](https://docs.datadoghq.com/tracing/trace_pipeline/generate_metrics/) from ingested spans cannot be used.
+2. Updating the span's resource name, operation name, and/or span type will allow the span data and generated trace metrics (if any) better align with semantic conventions and be more readily usable inside Datadog.
 
 Currently, these interceptors help for the above use cases:
 
@@ -22,6 +23,7 @@ Currently, these interceptors help for the above use cases:
 * SetErrorInterceptor - set the error status on matching spans, optionally remapping arbitrary tags
 * PromoteErrorInterceptor - promote an error status to the Service Entry Span, optionally also promoting error tags (to enable Error Tracking).
 * TraceMetricInterceptor - create custom trace metrics from spans, optionally with arbitrary tags added to the metrics.
+* SpanSetInterceptor - set the span's operation name, resource name, and/or span type based on arbitrary tags in the span. This can be particularly useful to differentiate between different types of transactions based on custom span tag(s) in a way that the different transactions are visible on the Service page as the operation_name or resource_name.
 
 Each is configured by regex patterns that are used to match against span tag values.
 
@@ -70,6 +72,7 @@ The system properties for configuring the tag matching patterns for the intercep
 * SetErrorInterceptor - `dd.error.set.pattern.`
 * PromoteErrorInterceptor - `dd.error.promote.pattern.`
 * TraceMetricInterceptor - `dd.trace.metric.pattern.`
+* SpanSetInterceptor - `dd.span.set.pattern.`
 
 The configured value is used as a Java regular expression
 [Pattern](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) and is matched against the tag value
@@ -86,9 +89,9 @@ Note that the **entire** tag value must match the expression, so build your patt
 ## Other configuration
 
 * `dd.error.promote.error.tags.enable` - set this to `true` to promote the standard error tags to the Service Entry Span. This is to help enable Error Tracking.
-* `dd.error.set.mapping` - comma-separated key=value list of tags to remap when the error status is set to true. This is useful for mapping custom tags to standard error tags to help enable Error Tracking).
+* `dd.error.set.mapping` - comma-separated key=value list of tags to remap when the error status is set to true. This is useful for mapping custom tags to standard error tags to help enable Error Tracking.
 * `dd.trace.metric.tags` - comma-separated list of tags to copy from matching spans to generated metrics.
-
+* `dd.span.set.resource_name.tag`, `dd.span.set.operation_name.tag`, `dd.span.set.span_type.tag` - specify the span tag(s) to copy into the span's resource name, operation name, and/or span type, respectively.
 
 ## Configuration examples
 To unset the error status when the `error.stack` contains `404 Not Found`:
@@ -117,4 +120,12 @@ To create custom trace metrics for `servlet.request` spans, coping the `foo` tag
 ```
 dd.trace.metric.pattern.operation_name='servlet\.request'
 dd.trace.metric.tags=foo
+```
+
+To set the resource_name to the `transaction` tag for `dd.dynamic.span` spans for `class.method`:
+
+```
+dd.span.set.pattern.operation_name='dd\.dynamic\.span'
+dd.span.set.pattern.resource_name='class\.method'
+dd.span.set.resource_name.tag=transaction
 ```

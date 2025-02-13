@@ -13,5 +13,7 @@ public final class InterceptorBootstrap {
         GlobalTracer.get().addTraceInterceptor(new PromoteErrorInterceptor(102));
 
         GlobalTracer.get().addTraceInterceptor(new TraceMetricInterceptor(103));
+
+        GlobalTracer.get().addTraceInterceptor(new SpanSetInterceptor(104));
     }
 }
