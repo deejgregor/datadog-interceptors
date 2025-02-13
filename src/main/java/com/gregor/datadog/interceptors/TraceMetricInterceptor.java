@@ -43,10 +43,23 @@ public class TraceMetricInterceptor extends AbstractTraceInterceptor {
                         strings.add(t + ":" + span.getTag(t).toString());
                     }
                 }
-                statsd.incrementCounter("trace." + span.getOperationName() + ".hits", strings.toArray(new String[]{}));
+
+                String[] metricTags = strings.toArray(new String[]{});
+                statsd.distribution(getMetricName(span), span.getDurationNano() * 1000000000, metricTags);
+                statsd.incrementCounter(getMetricName(span, "hits"), metricTags);
+                if (span.isError()) {
+                    statsd.incrementCounter(getMetricName(span, "errors"), metricTags);
+                }
             }
         }
 
         return trace;
+    }
+
+    private static String getMetricName(MutableSpan span, String suffix) {
+        return "trace." + span.getOperationName() + "." + suffix;
+    }
+    private static String getMetricName(MutableSpan span) {
+        return "trace." + span.getOperationName();
     }
 }

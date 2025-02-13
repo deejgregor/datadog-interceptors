@@ -3,18 +3,25 @@
 This is a set of [TraceInterceptors](https://docs.datadoghq.com/tracing/trace_collection/custom_instrumentation/java/dd-api/#extending-tracers)
 for Datadog's [Java APM tracer](https://docs.datadoghq.com/tracing/trace_collection/automatic_instrumentation/dd_libraries/java/?tab=wget).
 
-This group of interceptors is intended to help manage errors in automatically instrumented services where it is
-non-trivial to change the application code. They are intended to help in these use cases:
+This group of interceptors is intended to help improve traces and trace-generated metrics in auto-instrumented services where it is non-trivial to change the application code.
+The interceptor functionality falls into two main categories: improving error handling in traces and improving trace metrics.
+
+Error handling use cases:
 
 1. Unset the error status on spans that aren't considered errors from the application's perspective. Useful when automatic instrumentation marks a span as an error in situations where it isn't treated as an error from an application perspective. Example: a downstream service returns an HTTP 500 code for something that isn't considered an error.
 2. Set the error status on spans where automatic instrumentation didn't detect an error. This is helpful when an automatically instrumented service receives an HTTP 200 response, but the HTTP body contains more detailed status information indicating an error, such as GraphQL errors. If the existence of the error is available in tags (including onces created by [Dynamic Instrumentation](https://docs.datadoghq.com/dynamic_instrumentation/)),  then this feature can be used to set the error status.
 3. Promote an error status from a deeper span to the Service Entry Span (aka LocalRootSpan). This helps to make errors visible on the Service page which usually shows the Service Entry Span by default and also [Error Tracking](https://docs.datadoghq.com/tracing/error_tracking/#use-span-tags-to-track-error-spans), which only looks at the Service Entry Span.
 
-Currently, there are three interceptors that help for the above three use cases:
+Trace metrics use case:
+
+1. Trace metrics are needed with additional dimensions that are not available on the [out-of-the-box trace metrics](https://docs.datadoghq.com/tracing/metrics/metrics_namespace/#metric-suffix) **and** the metrics need to represent 100% of the applications traffic, so [generating metrics from spans](https://docs.datadoghq.com/tracing/trace_pipeline/generate_metrics/) from ingested spans cannot be used.
+
+Currently, these interceptors help for the above use cases:
 
 * UnsetErrorInterceptor - unset the error status on matching spans
 * SetErrorInterceptor - set the error status on matching spans, optionally remapping arbitrary tags
 * PromoteErrorInterceptor - promote an error status to the Service Entry Span, optionally also promoting error tags (to enable Error Tracking).
+* TraceMetricInterceptor - create custom trace metrics from spans, optionally with arbitrary tags added to the metrics.
 
 Each is configured by regex patterns that are used to match against span tag values.
 
@@ -57,11 +64,12 @@ but is expected to be extensible in the future. These are the tags (and other sp
 * `resource_name`
 * `type`
 
-The system properties for configuring the tag matching patterns for the three interceptors start with these prefixes:
+The system properties for configuring the tag matching patterns for the interceptors start with these prefixes:
 
 * UnsetErrorInterceptor - `dd.error.unset.pattern.`
 * SetErrorInterceptor - `dd.error.set.pattern.`
 * PromoteErrorInterceptor - `dd.error.promote.pattern.`
+* TraceMetricInterceptor - `dd.trace.metric.pattern.`
 
 The configured value is used as a Java regular expression
 [Pattern](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html) and is matched against the tag value
@@ -78,7 +86,8 @@ Note that the **entire** tag value must match the expression, so build your patt
 ## Other configuration
 
 * `dd.error.promote.error.tags.enable` - set this to `true` to promote the standard error tags to the Service Entry Span. This is to help enable Error Tracking.
-* `dd.error.set.mapping` - this is a comman-separated key=value list of tags to remap when the error status is set to true. This is useful for mapping custom tags to standard error tags to help enable Error Tracking).
+* `dd.error.set.mapping` - comma-separated key=value list of tags to remap when the error status is set to true. This is useful for mapping custom tags to standard error tags to help enable Error Tracking).
+* `dd.trace.metric.tags` - comma-separated list of tags to copy from matching spans to generated metrics.
 
 
 ## Configuration examples
@@ -101,4 +110,11 @@ To set the error status when we see a specific method called. Also remap custom 
 ```
 dd.error.set.pattern.resource_name='MyErrorHandlingClass.somethingIsBroken'
 dd.error.set.mapping=error.message=custom_error_tag,error.stack=custom_error_details,error.type=custom_error_type
+```
+
+To create custom trace metrics for `servlet.request` spans, coping the `foo` tag from the spans to the metrics:
+
+```
+dd.trace.metric.pattern.operation_name='servlet\.request'
+dd.trace.metric.tags=foo
 ```
