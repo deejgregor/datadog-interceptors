@@ -13,7 +13,6 @@ repositories {
 
 dependencies {
     compileOnly('com.datadoghq:dd-trace-api:1.39.0')
-    implementation('com.datadoghq:java-dogstatsd-client:4.4.3') // XXX note: 4.2.1 is not in maven central repo
 }
 
 jar {

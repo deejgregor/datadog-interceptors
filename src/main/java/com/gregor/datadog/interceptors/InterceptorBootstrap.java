@@ -12,8 +12,6 @@ public final class InterceptorBootstrap {
         // Promote comes next, so it can act on any adjustments to the error status made earlier
         GlobalTracer.get().addTraceInterceptor(new PromoteErrorInterceptor(102));
 
-        GlobalTracer.get().addTraceInterceptor(new TraceMetricInterceptor(103));
-
         GlobalTracer.get().addTraceInterceptor(new SpanSetInterceptor(104));
     }
 }
